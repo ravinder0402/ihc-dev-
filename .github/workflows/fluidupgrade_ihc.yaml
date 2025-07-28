@@ -101,22 +101,25 @@ jobs:
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
 
-#       - name: Backup values.yaml and upload to MinIO
-#         working-directory: ./
-#         run: |
-#           TIMESTAMP=$(date +%Y%m%d%H%M%S)
-#           FILE="values.yaml.$TIMESTAMP"
-#           cp fluid-override.yaml $FILE
-#           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
-#           rm $FILE
+      - name: Backup values.yaml and upload to MinIO
+        working-directory: ./
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          FILE="fluid_values.yaml.$TIMESTAMP"
+          cp fluid-override.yaml $FILE
+          aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
+          rm $FILE
 
-#       - name: Helm registry login
-#         run: |
-#           helm registry login docker.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Helm registry login
+        run: |
+          helm registry login docker.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
 
-#       # - name: Helm upgrade/install fluid chart
-#       #   working-directory: ./
-#       #   run: |
-#       #     helm upgrade -f fluid-override.yaml ccs oci://registry-1.docker.io/coredgehelm/ccs -n ccs
-#       #     helm list -A
+      - name: Helm upgrade/install fluid chart
+        working-directory: ./
+        run: |
+          helm upgrade -f fluid-override.yaml ccs oci://registry-1.docker.io/coredgehelm/ccs -n ccs
+          helm list -A
+          sleep 60 
+          kubectl get po -n ccs
+          kubectl get po -n corobots
