@@ -118,7 +118,7 @@ jobs:
       - name: Wait until all pods are Running or Completed, then run Helm upgrade
         run: |
           namespace="${{ secrets.FLUID_NAMESPACE }}"
-          max_retries=2   
+          max_retries=3   
           retry_interval=60
           attempt=0
       
