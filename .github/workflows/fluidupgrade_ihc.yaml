@@ -14,9 +14,8 @@ jobs:
 
       - name: Set up kubeconfig
         run: |
-          echo "${{ secrets.KUBECONFIG_RAW }}" > kubeconfig
-          export KUBECONFIG=$PWD/kubeconfig
           kubectl config get-contexts
+          kubectl get nodes -A
 
       - name: Install AWS CLI
         run: |
