@@ -119,7 +119,7 @@ jobs:
         run: |
           namespace="${{ secrets.FLUID_NAMESPACE }}"
           max_retries=2   
-          retry_interval=300
+          retry_interval=60
           attempt=0
       
           while true; do
