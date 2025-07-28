@@ -115,11 +115,18 @@ jobs:
           helm registry login registry-1.docker.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
 
-      - name: Helm upgrade/install fluid chart
-        working-directory: ./
+      - name: Check pod status and run Helm upgrade only if pods are Running or Completed
         run: |
-          helm upgrade -f fluid-override.yaml ccs oci://registry-1.docker.io/coredgehelm/ccs -n ccs
+          not_ready=$(kubectl get pods -n ccs --no-headers | grep -vE 'Running|Succeeded' | wc -l)
+          if [ "$not_ready" -eq 0 ]; then
+            echo "All existing pods in 'ccs' namespace are Running or Completed. Proceeding with Helm upgrade."
+            helm upgrade --install -f fluid-override.yaml ccs oci://registry-1.docker.io/coredgehelm/ccs -n ccs
+          else
+            echo "Pods not ready. Aborting Helm upgrade."
+            kubectl get pods -n ccs
+            exit 1
+          fi
           helm list -A
-          sleep 60 
           kubectl get po -n ccs
           kubectl get po -n corobots
+
