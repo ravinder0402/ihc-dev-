@@ -42,7 +42,7 @@
 #         run: |
 #           TIMESTAMP=$(date +%Y%m%d%H%M%S)
 #           FILE="fluid_ccs_pg_backup_$TIMESTAMP.sql"
-#           kubectl exec -i -n fluid ccs-postgresql-cluster-0 -- pg_dumpall -U postgres > $FILE
+#           kubectl exec -i -n ccs ccs-postgresql-cluster-0 -- pg_dumpall -U postgres > $FILE
 #           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
 #           rm $FILE
  
@@ -52,7 +52,7 @@
 #         run: |
 #           TIMESTAMP=$(date +%Y%m%d%H%M%S)
 #           FILE="fluid_keycloak_pg_backup_$TIMESTAMP.sql"
-#           kubectl exec -i -n fluid keycloak-postgresql-cluster-0 -- \
+#           kubectl exec -i -n ccs keycloak-postgresql-cluster-0 -- \
 #             pg_dumpall -U postgres > $FILE
 #           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
 #           rm $FILE
@@ -69,7 +69,7 @@
 #         run: |
 #           TIMESTAMP=$(date +%Y%m%d%H%M%S)
 #           FILE="fluid_config-db_all_dbs_backup_$TIMESTAMP.archive"
-#           kubectl exec -i -n fluid configdb-0 -- \
+#           kubectl exec -i -n ccs configdb-0 -- \
 #             mongodump --username sigma --password "${{ secrets.MONGO_PASSWORD }}" --authenticationDatabase admin --archive > $FILE
 #           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
 #           rm $FILE
@@ -78,7 +78,7 @@
 #         run: |
 #           TIMESTAMP=$(date +%Y%m%d%H%M%S)
 #           FILE="fluid_metrics-db_all_dbs_backup_$TIMESTAMP.archive"
-#           kubectl exec -i -n fluid metricsdb-0 -- \
+#           kubectl exec -i -n ccs metricsdb-0 -- \
 #             mongodump --username sigma --password "${{ secrets.MONGO_PASSWORD }}" --authenticationDatabase admin --archive > $FILE
 #           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
 #           rm $FILE
@@ -102,11 +102,11 @@
 #           rm $FILE
 
 #       - name: Backup values.yaml and upload to MinIO
-#         working-directory: ./helm
+#         working-directory: ./
 #         run: |
 #           TIMESTAMP=$(date +%Y%m%d%H%M%S)
 #           FILE="values.yaml.$TIMESTAMP"
-#           cp values.yaml $FILE
+#           cp fluid-override.yaml $FILE
 #           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
 #           rm $FILE
 
