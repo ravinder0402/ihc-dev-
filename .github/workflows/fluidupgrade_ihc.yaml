@@ -112,7 +112,7 @@ jobs:
 
       - name: Helm registry login
         run: |
-          helm registry login docker.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          helm registry login registry-1.docker.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
 
       - name: Helm upgrade/install fluid chart
