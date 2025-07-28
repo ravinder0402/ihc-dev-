@@ -42,7 +42,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           FILE="fluid_ccs_pg_backup_$TIMESTAMP.sql"
-          kubectl exec -i -n ccs ccs-postgresql-cluster-0 -- pg_dumpall -U postgres > $FILE
+          kubectl exec -i -n ${{ secrets.FLUID_NAMESPACE }} ccs-postgresql-cluster-0 -- pg_dumpall -U postgres > $FILE
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
  
@@ -52,7 +52,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           FILE="fluid_keycloak_pg_backup_$TIMESTAMP.sql"
-          kubectl exec -i -n ccs keycloak-postgresql-cluster-0 -- \
+          kubectl exec -i -n ${{ secrets.FLUID_NAMESPACE }} keycloak-postgresql-cluster-0 -- \
             pg_dumpall -U postgres > $FILE
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
@@ -61,7 +61,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           FILE="corobots_pg_databases_backup_$TIMESTAMP.sql"
-          kubectl exec -n corobots keycloak-pg-0 -- bash -c "pg_dumpall -U root" > $FILE
+          kubectl exec -n ${{ secrets.COROBOT_NAMESPACE }} keycloak-pg-0 -- bash -c "pg_dumpall -U root" > $FILE
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
           
@@ -69,7 +69,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           FILE="fluid_config-db_all_dbs_backup_$TIMESTAMP.archive"
-          kubectl exec -i -n ccs configdb-0 -- \
+          kubectl exec -i -n ${{ secrets.FLUID_NAMESPACE }} configdb-0 -- \
             mongodump --username sigma --password "${{ secrets.MONGO_PASSWORD }}" --authenticationDatabase admin --archive > $FILE
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
@@ -78,7 +78,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           FILE="fluid_metrics-db_all_dbs_backup_$TIMESTAMP.archive"
-          kubectl exec -i -n ccs metricsdb-0 -- \
+          kubectl exec -i -n ${{ secrets.FLUID_NAMESPACE }} metricsdb-0 -- \
             mongodump --username sigma --password "${{ secrets.MONGO_PASSWORD }}" --authenticationDatabase admin --archive > $FILE
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
@@ -87,7 +87,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           FILE="corobots_config-db_all_dbs_backup_$TIMESTAMP.archive"
-          kubectl exec -it -n corobots configdb-0 -- \
+          kubectl exec -it -n ${{ secrets.COROBOT_NAMESPACE }} configdb-0 -- \
             mongodump --username sigma --password "${{ secrets.MONGO_PASSWORD }}" --authenticationDatabase admin --archive > $FILE
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
@@ -96,7 +96,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           FILE="corobots_metrics-db_all_dbs_backup_$TIMESTAMP.archive"
-          kubectl exec -it -n corobots metricsdb-0 -- \
+          kubectl exec -it -n ${{ secrets.COROBOT_NAMESPACE }} metricsdb-0 -- \
             mongodump --username sigma --password "${{ secrets.MONGO_PASSWORD }}" --authenticationDatabase admin --archive > $FILE
           aws --endpoint-url ${{ secrets.MINIO_ENDPOINT }} s3 cp $FILE s3://${{ secrets.MINIO_BUCKET }}/$FILE
           rm $FILE
@@ -115,18 +115,33 @@ jobs:
           helm registry login registry-1.docker.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
 
-      - name: Check pod status and run Helm upgrade only if pods are Running or Completed
+      - name: Wait until all pods are Running or Completed, then run Helm upgrade
         run: |
-          not_ready=$(kubectl get pods -n ccs --no-headers | grep -vE 'Running|Succeeded' | wc -l)
-          if [ "$not_ready" -eq 0 ]; then
-            echo "All existing pods in 'ccs' namespace are Running or Completed. Proceeding with Helm upgrade."
-            helm upgrade --install -f fluid-override.yaml ccs oci://registry-1.docker.io/coredgehelm/ccs -n ccs
-          else
-            echo "Pods not ready. Aborting Helm upgrade."
-            kubectl get pods -n ccs
-            exit 1
-          fi
+          namespace="${{ secrets.FLUID_NAMESPACE }}"
+          max_retries=2   
+          retry_interval=300
+          attempt=0
+      
+          while true; do
+            not_ready=$(kubectl get pods -n ${{ secrets.FLUID_NAMESPACE }} --no-headers | grep -vE 'Running|Succeeded|Completed' | wc -l)
+            if [ "$not_ready" -eq 0 ]; then
+              echo "All existing pods in ${{ secrets.FLUID_NAMESPACE }} namespace are Running or Completed. Proceeding with Helm upgrade."
+              helm upgrade --install -f fluid-override.yaml ${{ secrets.FLUID_NAME }} oci://registry-1.docker.io/coredgehelm/ccs -n ${{ secrets.FLUID_NAMESPACE }}
+              break
+            else
+              echo "Pods not ready yet (attempt $((attempt+1))/$max_retries). Waiting for 5 minutes before retrying..."
+              kubectl get pods -n ${{ secrets.FLUID_NAMESPACE }}
+              attempt=$((attempt+1))
+              if [ "$attempt" -ge "$max_retries" ]; then
+                echo "Maximum retries reached. Pods are still not ready. Aborting."
+                exit 1
+              fi
+              sleep $retry_interval
+            fi
+          done
+      
           helm list -A
-          kubectl get po -n ccs
-          kubectl get po -n corobots
+          kubectl get po -n ${{ secrets.FLUID_NAMESPACE }}
+          kubectl get po -n ${{ secrets.COROBOT_NAMESPACE }}
+
 
