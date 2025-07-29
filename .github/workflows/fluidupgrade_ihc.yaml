@@ -122,7 +122,7 @@ jobs:
           attempt=0
       
           while true; do
-            not_ready=$(kubectl get pods -n ${{ secrets.FLUID_NAMESPACE }} --no-headers | grep -vE 'Running|Succeeded|Completed' | wc -l)
+            not_ready=$(kubectl get pods -n ${{ secrets.FLUID_NAMESPACE }} --no-headers | grep -vE '' | wc -l)
             if [ "$not_ready" -eq 0 ]; then
               echo "All existing pods in ${{ secrets.FLUID_NAMESPACE }} namespace are Running or Completed. Proceeding with Helm upgrade."
               helm upgrade --install -f fluid-override.yaml ${{ secrets.FLUID_NAME }} oci://registry-1.docker.io/coredgehelm/ccs -n ${{ secrets.FLUID_NAMESPACE }}
