@@ -128,7 +128,7 @@ jobs:
       
               if ! helm upgrade --install -f fluid-override.yaml ${{ secrets.FLUID_NAME }} oci://registry-1.docker.io/coredgehelm/ccs -n ${{ secrets.FLUID_NAMESPACE }}; then
                 echo "Helm upgrade failed. Rolling back..."
-                helm rollback ${{ secrets.FLUID_NAME }}
+                helm rollback ${{ secrets.FLUID_NAME }} -n ${{ secrets.FLUID_NAMESPACE }}
                 exit 1
               fi
       
