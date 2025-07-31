@@ -117,7 +117,7 @@ jobs:
       - name: Wait until all pods are Running or Completed, then run Helm upgrade
         run: |
           namespace="${{ secrets.FLUID_NAMESPACE }}"
-          max_retries=3   
+          max_retries=2  
           retry_interval=60
           attempt=0
       
@@ -125,10 +125,16 @@ jobs:
             not_ready=$(kubectl get pods -n ${{ secrets.FLUID_NAMESPACE }} --no-headers | grep -vE '' | wc -l)
             if [ "$not_ready" -eq 0 ]; then
               echo "All existing pods in ${{ secrets.FLUID_NAMESPACE }} namespace are Running or Completed. Proceeding with Helm upgrade."
-              helm upgrade --install -f fluid-override.yaml ${{ secrets.FLUID_NAME }} oci://registry-1.docker.io/coredgehelm/ccs -n ${{ secrets.FLUID_NAMESPACE }}
+      
+              if ! helm upgrade --install -f fluid-override.yaml ${{ secrets.FLUID_NAME }} oci://registry-1.docker.io/coredgehelm/ccs -n ${{ secrets.FLUID_NAMESPACE }}; then
+                echo "Helm upgrade failed. Rolling back..."
+                helm rollback ${{ secrets.FLUID_NAME }}
+                exit 1
+              fi
+      
               break
             else
-              echo "Pods not ready yet (attempt $((attempt+1))/$max_retries). Waiting for 5 minutes before retrying..."
+              echo "Pods not ready yet (attempt $((attempt+1))/$max_retries). Waiting for 1 minutes before retrying..."
               kubectl get pods -n ${{ secrets.FLUID_NAMESPACE }}
               attempt=$((attempt+1))
               if [ "$attempt" -ge "$max_retries" ]; then
@@ -142,5 +148,6 @@ jobs:
           helm list -A
           kubectl get po -n ${{ secrets.FLUID_NAMESPACE }}
           kubectl get po -n ${{ secrets.COROBOT_NAMESPACE }}
+
 
 
